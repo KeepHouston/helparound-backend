@@ -1,11 +1,11 @@
 import { AuthenticationError } from 'apollo-server-express';
-import { Arg, Field, Mutation, Resolver, ObjectType, Query, InputType, Ctx, PubSub, PubSubEngine, UseMiddleware } from 'type-graphql';
+import { Arg, Ctx, Field, InputType, Mutation, ObjectType, PubSub, PubSubEngine, Query, Resolver, UseMiddleware } from 'type-graphql';
 import { CustomContext } from '../../context/types';
 import { isAuthenticated } from '../../middlewares/isAuthenticated';
-
-import { setCookies } from '../../utils'
-import { authenticateGoogle, refreshTokens } from '../../utils/auth'
+import { setCookies } from '../../utils';
+import { authenticateGoogle, refreshTokens } from '../../utils/auth';
 import { USER_ONLINE } from '../SubscriptionTypes';
+
 
 @ObjectType()
 class AuthResponse {
@@ -114,7 +114,7 @@ export class AuthResolver {
             }
             return (Error('server error'));
         } catch (error) {
-            return error;
+            return error as Error;
         }
     }
 }

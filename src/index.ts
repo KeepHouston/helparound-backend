@@ -1,20 +1,20 @@
+import { PrismaClient } from '@prisma/client';
+import { ApolloServer } from "apollo-server-express";
+import cookieParser from 'cookie-parser';
+import express, { Request } from "express";
+import { PubSub } from 'graphql-subscriptions';
+import { createServer } from "http";
 import "reflect-metadata";
+import { buildSchema } from 'type-graphql';
+import { Claims } from "./context/types";
+import { resolvers } from './resolvers';
+import { USER_ONLINE } from "./resolvers/SubscriptionTypes";
+import { getClaims, parseCookies } from './utils';
 
-import cookieParser from 'cookie-parser'
 require('dotenv').config()
 
-import { resolvers } from './resolvers'
-import { getClaims, parseCookies } from './utils'
 
-import { PrismaClient } from '@prisma/client'
 
-import { buildSchema } from 'type-graphql'
-import express, { Request } from "express";
-import { ApolloServer } from "apollo-server-express";
-import { createServer } from "http";
-import { PubSub } from 'graphql-subscriptions';
-import { Claims } from "./context/types";
-import { USER_ONLINE } from "./resolvers/SubscriptionTypes";
 
 async function bootstrap() {
 
@@ -23,7 +23,7 @@ async function bootstrap() {
   app.use(cookieParser())
 
   const httpServer = createServer(app);
-  
+
   const pubSub = new PubSub();
 
   const prisma = new PrismaClient()
@@ -53,7 +53,7 @@ async function bootstrap() {
         const { claims } = await wscontext.initPromise;
 
         const { id } = claims ?? {}
-        
+
         id && await pubSub.publish(USER_ONLINE, { id, online: false });
 
         console.log("Client disconnected from subscriptions");

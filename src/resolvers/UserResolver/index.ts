@@ -1,11 +1,11 @@
-import { Resolver, Query, Ctx, Field, ObjectType, Float, Subscription, Root, PubSubEngine, UseMiddleware, PubSub, InputType, Arg } from 'type-graphql';
-
-import * as R from 'rambda'
-
+import * as R from 'rambda';
+import { Arg, Ctx, Field, Float, InputType, ObjectType, Query, Resolver, Root, Subscription, UseMiddleware } from 'type-graphql';
 import { CustomContext } from '../../context/types';
-import { isAuthenticated } from '../../middlewares/isAuthenticated';
 import { User } from '../../generated/type-graphql';
+import { isAuthenticated } from '../../middlewares/isAuthenticated';
 import { LOCATION_UPDATE, USER_ONLINE } from '../SubscriptionTypes';
+
+
 
 const toRadians = (v: number) => v * Math.PI / 180
 
@@ -75,29 +75,29 @@ class NameEmailSearchArgs {
 
 @Resolver(User)
 export class UserResolver {
-    @UseMiddleware(isAuthenticated)
-    @Query(returns => User)
-    async getUserData(
-        @Ctx() ctx: CustomContext,
-        @PubSub() pubSub: PubSubEngine
-    ) {
+    // @UseMiddleware(isAuthenticated)
+    // @Query(returns => User)
+    // async getUserData(
+    //     @Ctx() ctx: CustomContext,
+    //     @PubSub() pubSub: PubSubEngine
+    // ) {
 
-        const { req: { claims: { id, name, email, picture: image } }, prisma } = ctx
+    //     const { req: { claims: { id, name, email, picture: image } }, prisma } = ctx
 
-        await pubSub.publish(USER_ONLINE, { id, online: true });
+    //     await pubSub.publish(USER_ONLINE, { id, online: true });
 
-        return prisma.user.upsert({
-            where: {
-                id
-            },
-            update: {
-                id, name, email, image, online: true
-            },
-            create: {
-                id, name, email, image, online: true
-            }
-        })
-    }
+    //     return prisma.user.upsert({
+    //         where: {
+    //             id
+    //         },
+    //         update: {
+    //             id, name, email, image, online: true
+    //         },
+    //         create: {
+    //             id, name, email, image, online: true
+    //         }
+    //     })
+    // }
 
     @UseMiddleware(isAuthenticated)
     @Query(returns => User)
@@ -111,37 +111,6 @@ export class UserResolver {
         return await prisma.user.findUnique({
             where: {
                 id
-            }
-        })
-    }
-
-    @UseMiddleware(isAuthenticated)
-    @Query(returns => [User])
-    async findUserByNameOrEmail(
-        @Ctx() ctx: CustomContext,
-        @Arg("input") searchArgs: NameEmailSearchArgs,
-    ): Promise<User[] | null> {
-        const { prisma, req: { claims: { id } } } = ctx
-
-        const { search } = searchArgs
-
-        return await prisma.user.findMany({
-            where: {
-                OR: [{
-                    email: {
-                        contains: search,
-                        mode: 'insensitive'
-                    }
-                },
-                {
-                    name: {
-                        contains: search,
-                        mode: 'insensitive'
-                    }
-                }],
-                NOT: {
-                    id
-                }
             }
         })
     }
@@ -165,19 +134,19 @@ export class UserResolver {
         })).map(R.prop('receiver'))
     }
 
-    @UseMiddleware(isAuthenticated)
-    @Query(returns => [UserResponse])
-    async getNearestUsers(@Ctx() ctx: CustomContext): Promise<[UserResponse]> {
-        const { req: { claims: { id } }, prisma } = ctx
+    // @UseMiddleware(isAuthenticated)
+    // @Query(returns => [UserResponse])
+    // async getNearestUsers(@Ctx() ctx: CustomContext): Promise<[UserResponse]> {
+    //     const { req: { claims: { id } }, prisma } = ctx
 
-        const { latitude, longitude } = await prisma.userposition.findUnique({
-            where: {
-                userid: id
-            }
-        }) ?? {}
+    //     const { latitude, longitude } = await prisma.userposition.findUnique({
+    //         where: {
+    //             userid: id
+    //         }
+    //     }) ?? {}
 
-        return prisma.$queryRaw`SELECT u.name, u.email, u.image, u.id, 6371 * 2 * ASIN(SQRT(POWER(SIN((radians(up.latitude) - radians(${latitude})) / 2), 2) + COS(radians(${latitude}))* cos(radians(up.latitude)) * POWER(SIN((radians(up.longitude) - radians(${longitude})) / 2), 2))) as distance FROM "userposition" up join "user" u on up.userid=u.id and up.userid!=${id} and u.online=true order by distance;`
-    }
+    //     return prisma.$queryRaw`SELECT u.name, u.email, u.image, u.id, 6371 * 2 * ASIN(SQRT(POWER(SIN((radians(up.latitude) - radians(${latitude})) / 2), 2) + COS(radians(${latitude}))* cos(radians(up.latitude)) * POWER(SIN((radians(up.longitude) - radians(${longitude})) / 2), 2))) as distance FROM "userposition" up join "user" u on up.userid=u.id and up.userid!=${id} and u.online=true order by distance;`
+    // }
 
 
     @Subscription(() => UserUpdateResponse, {
