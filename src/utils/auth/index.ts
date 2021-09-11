@@ -1,8 +1,6 @@
 import axios from 'axios'
 import { OAuth2Client } from 'google-auth-library'
-import passport from 'passport'
 import { Claims } from '../../context/types'
-import GoogleAuthCodeStrategy from './passport/authcode_strategy'
 
 export const validateToken = async (token: any, clientId: string) => {
     const tokenPayload = await loadTokenPayload(token)
@@ -38,43 +36,6 @@ const loadTokenPayload = async (token: any) => {
     }
 }
 
-// GOOGLE STRATEGY
-const GoogleTokenStrategyCallback = (
-    resultsJson: any,
-    accessToken: any,
-    refreshToken: any,
-    profile: any,
-    done: (
-        arg0: null,
-        arg1: {
-            accessToken: any
-            refreshToken: any
-            profile: any
-            idToken: any
-        }
-    ) => any
-) => {
-    const { id_token: idToken } = resultsJson
-
-    return done(null, {
-        accessToken,
-        refreshToken,
-        idToken,
-        profile,
-    })
-}
-
-const GoogleStrategy = new GoogleAuthCodeStrategy(
-    {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: 'postmessage',
-    },
-    GoogleTokenStrategyCallback
-)
-
-passport.use(GoogleStrategy)
-
 export const refreshTokens = async (tokens: any) => {
     const oauth2Client = new OAuth2Client(
         process.env.GOOGLE_CLIENT_ID,
@@ -90,16 +51,3 @@ export const refreshTokens = async (tokens: any) => {
 
     return await oauth2Client.refreshAccessToken()
 }
-
-export const authenticateGoogle = (req: any, res: any) =>
-    new Promise((resolve, reject) => {
-        passport.authenticate(
-            'google-authcode',
-            { session: false, prompt: 'consent' },
-            (err: any, data: any, info: any) => {
-                if (err) reject(err)
-
-                resolve({ data, info })
-            }
-        )(req, res)
-    })

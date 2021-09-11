@@ -131,29 +131,29 @@ export class UserResolver {
         })
     }
 
-    @UseMiddleware(isAuthenticated)
-    @Query((returns) => [User])
-    async getRecentUsersRelations(@Ctx() ctx: CustomContext): Promise<User[]> {
-        const {
-            req: {
-                claims: { id },
-            },
-            prisma,
-        } = ctx
+    // @UseMiddleware(isAuthenticated)
+    // @Query((returns) => [User])
+    // async getRecentUsersRelations(@Ctx() ctx: CustomContext): Promise<User[]> {
+    //     const {
+    //         req: {
+    //             claims: { id },
+    //         },
+    //         prisma,
+    //     } = ctx
 
-        //@ts-ignore
-        return (
-            await prisma.filerequest.findMany({
-                where: {
-                    senderid: id,
-                },
-                include: {
-                    receiver: true,
-                },
-                distinct: ['receiverid'],
-            })
-        ).map(R.prop('receiver'))
-    }
+    //     //@ts-ignore
+    //     return (
+    //         await prisma.filerequest.findMany({
+    //             where: {
+    //                 senderid: id,
+    //             },
+    //             include: {
+    //                 receiver: true,
+    //             },
+    //             distinct: ['receiverid'],
+    //         })
+    //     ).map(R.prop('receiver'))
+    // }
 
     // @UseMiddleware(isAuthenticated)
     // @Query(returns => [UserResponse])

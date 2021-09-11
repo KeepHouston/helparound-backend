@@ -8,14 +8,13 @@ import {
     ObjectType,
     PubSub,
     PubSubEngine,
-    Query,
     Resolver,
     UseMiddleware,
 } from 'type-graphql'
 import { CustomContext } from '../../context/types'
 import { isAuthenticated } from '../../middlewares/isAuthenticated'
 import { setCookies } from '../../utils'
-import { authenticateGoogle, refreshTokens } from '../../utils/auth'
+import { getUserProfile, refreshTokens, validateToken } from '../../utils/auth'
 import { USER_ONLINE } from '../SubscriptionTypes'
 
 @ObjectType()
@@ -31,17 +30,16 @@ class AuthResponse {
 @InputType()
 class AuthArgs {
     @Field()
-    code!: string
+    idToken!: string
+    @Field()
+    accessToken!: string
+    @Field()
+    refreshToken!: string
 }
 
 @Resolver(AuthResponse)
 export class AuthResolver {
-    @Query((returns) => String)
-    hello(@Ctx() ctx: CustomContext): string {
-        return 'world'
-    }
-
-    @Mutation((returns) => AuthResponse)
+    @Mutation(() => AuthResponse)
     async refreshTokens(
         @Ctx() ctx: CustomContext
     ): Promise<AuthResponse | Error> {
@@ -58,8 +56,8 @@ export class AuthResolver {
 
         await refreshTokens({ accessToken, idToken, refreshToken })
             .then(setCookies(res))
-            .catch((err) => {
-                throw err
+            .catch(() => {
+                return new AuthResponse(false)
             })
 
         return new AuthResponse(true)
@@ -87,51 +85,49 @@ export class AuthResolver {
         return new AuthResponse(true)
     }
 
-    @Mutation((returns) => AuthResponse)
-    async authGoogle(
+    @Mutation(() => AuthResponse)
+    async logIn(
         @Arg('input') authArgs: AuthArgs,
         @Ctx() ctx: CustomContext
     ): Promise<AuthResponse | Error> {
-        const { req, res } = ctx
+        const { res, prisma } = ctx
 
-        const { code } = authArgs
-        req.body = {
-            ...req.body,
-            code,
+        const { accessToken, idToken, refreshToken } = authArgs
+
+        const validAccessToken = await validateToken(
+            { accessToken },
+            process.env.GOOGLE_CLIENT_ID || ''
+        )
+        const validIdToken = await validateToken(
+            { idToken },
+            process.env.GOOGLE_CLIENT_ID || ''
+        )
+        const userProfile = await getUserProfile(accessToken)
+
+        if (validAccessToken && validIdToken && userProfile) {
+            prisma.user.upsert({
+                create: {
+                    avatar: userProfile.picture,
+                    name: userProfile.name,
+                    id: userProfile.id,
+                    is_disabled: false,
+                },
+                update: {
+                    avatar: userProfile.picture,
+                    name: userProfile.name,
+                },
+                where: { id: userProfile.id },
+            })
+
+            setCookies(res)({
+                credentials: {
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                    id_token: idToken,
+                },
+            })
+            return new AuthResponse(true)
         }
-
-        try {
-            // data contains the accessToken, refreshToken and profile from passport
-            //@ts-ignore
-            const { data, info } = await authenticateGoogle(req, res)
-
-            if (data) {
-                const { accessToken, refreshToken, idToken } = data
-
-                setCookies(res)({
-                    credentials: {
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                        id_token: idToken,
-                    },
-                })
-
-                return new AuthResponse(true)
-            }
-
-            if (info) {
-                console.log(info)
-
-                switch (info.code) {
-                    case 'ETIMEDOUT':
-                        return new Error('Failed to reach Google: Try Again')
-                    default:
-                        return new Error('something went wrong')
-                }
-            }
-            return Error('server error')
-        } catch (error) {
-            return error as Error
-        }
+        return new AuthResponse(false)
     }
 }
