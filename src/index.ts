@@ -46,7 +46,12 @@ async function bootstrap() {
             },
         ],
         context: async ({ req, res, ...rest }: any): Promise<CustomContext> => {
-            const claims = await getClaims(req)
+            let claims
+            try {
+                claims = await getClaims(req)
+            } catch {
+                claims = null
+            }
             return {
                 req,
                 res,

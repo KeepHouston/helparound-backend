@@ -12,15 +12,16 @@ export const validateToken = async (
 
     try {
         const { data } = await axios.get(url)
+        if (!data) {
+            return null
+        }
         const { aud, exp } = data
         if (aud === clientId && exp < Date.now()) {
             return data
         }
-
-        return data
-    } catch (error: any) {
-        console.error({ error })
-        return error
+        return null
+    } catch {
+        return null
     }
 }
 

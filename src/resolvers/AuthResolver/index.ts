@@ -6,8 +6,6 @@ import {
     InputType,
     Mutation,
     ObjectType,
-    PubSub,
-    PubSubEngine,
     Resolver,
     UseMiddleware,
 } from 'type-graphql'
@@ -15,7 +13,6 @@ import { isAuthenticated } from '../../middlewares/isAuthenticated'
 import { CustomContext } from '../../types/customContext'
 import { setCookies } from '../../utils'
 import { getUserProfile, refreshTokens, validateToken } from '../../utils/auth'
-import { USER_ONLINE } from '../SubscriptionTypes'
 
 @ObjectType()
 class AuthResponse {
@@ -65,18 +62,13 @@ export class AuthResolver {
 
     @UseMiddleware(isAuthenticated)
     @Mutation(() => AuthResponse)
-    async signout(
-        @Ctx() ctx: any,
-        @PubSub() pubSub: PubSubEngine
+    async logout(
+        @Ctx() ctx: CustomContext
+        // @PubSub() pubSub: PubSubEngine
     ): Promise<AuthResponse | Error> {
-        const {
-            req: {
-                claims: { id },
-            },
-            res,
-        } = ctx
+        const { res } = ctx
 
-        await pubSub.publish(USER_ONLINE, { id, online: false })
+        // await pubSub.publish(USER_ONLINE, { id, online: false })
 
         res.clearCookie('accessToken')
         res.clearCookie('refreshToken')
@@ -94,9 +86,13 @@ export class AuthResolver {
 
         const { accessToken, idToken, refreshToken } = authArgs
 
-        const validAccessToken = await validateToken(accessToken, 'accessToken')
-        const validIdToken = await validateToken(idToken, 'idToken')
-        const userProfile = await getUserProfile(accessToken)
+        const [validAccessToken, validIdToken, userProfile] = await Promise.all(
+            [
+                await validateToken(accessToken, 'accessToken'),
+                await validateToken(idToken, 'idToken'),
+                await getUserProfile(accessToken),
+            ]
+        )
 
         if (validAccessToken && validIdToken && userProfile) {
             await prisma.user.upsert({

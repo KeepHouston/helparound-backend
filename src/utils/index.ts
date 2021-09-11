@@ -19,16 +19,18 @@ export const parseCookies = (request: Request): Request => {
 }
 
 export const getClaims = async (req: Request): Promise<Claims | null> => {
-    if (!req) {
+    if (!req?.cookies) {
         return null
     }
     const {
         cookies: { accessToken, idToken },
     } = req
 
-    const validAccessToken = await validateToken(accessToken, 'accessToken')
-    const validIdToken = await validateToken(idToken, 'idToken')
-    const userProfile = await getUserProfile(accessToken)
+    const [validAccessToken, validIdToken, userProfile] = await Promise.all([
+        await validateToken(accessToken, 'accessToken'),
+        await validateToken(idToken, 'idToken'),
+        await getUserProfile(accessToken),
+    ])
 
     if (validAccessToken && validIdToken && userProfile) {
         return userProfile
