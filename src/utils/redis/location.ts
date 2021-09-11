@@ -1,8 +1,15 @@
+import { Field, Float, InputType } from 'type-graphql'
 import { redisClient } from '.'
 
-export type Location = {
-    latitude: number
-    longtitude: number
+
+@InputType()
+export class PositionArgs {
+
+    @Field((type) => Float)
+    latitude!: number
+
+    @Field((type) => Float)
+    longitude!: number
 }
 
 export class UserLocation {
@@ -10,7 +17,7 @@ export class UserLocation {
 
     constructor(private userId: string) {}
 
-    async set(location: Location | null) {
+    async set(location: PositionArgs | null) {
         if (!location) {
             return
         }
@@ -19,7 +26,7 @@ export class UserLocation {
         return redis.set(this.storageKey, JSON.stringify(location))
     }
 
-    async get(): Promise<Location | null> {
+    async get(): Promise<PositionArgs | null> {
         const redis = await redisClient()
 
         const stringLocation = await redis.get(this.storageKey)
@@ -28,10 +35,10 @@ export class UserLocation {
             return null
         }
 
-        return JSON.parse(stringLocation) as Location
+        return JSON.parse(stringLocation) as PositionArgs
     }
 
-    async update(updater: (data: Location | null) => Location | null) {
+    async update(updater: (data: PositionArgs | null) => PositionArgs | null) {
         return this.set(updater(await this.get()))
     }
 }

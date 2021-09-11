@@ -11,18 +11,9 @@ import {
 } from 'type-graphql'
 import { isAuthenticated } from '../../middlewares/isAuthenticated'
 import { CustomContext } from '../../types/customContext'
+import { SuccessResponse } from '../../types/SuccessResponse'
 import { setCookies } from '../../utils'
 import { getUserProfile, refreshTokens, validateToken } from '../../utils/auth'
-
-@ObjectType()
-class AuthResponse {
-    constructor(success: boolean) {
-        this.success = success
-    }
-
-    @Field()
-    success!: boolean
-}
 
 @InputType()
 class AuthArgs {
@@ -34,12 +25,12 @@ class AuthArgs {
     refreshToken!: string
 }
 
-@Resolver(AuthResponse)
+@Resolver(SuccessResponse)
 export class AuthResolver {
-    @Mutation(() => AuthResponse)
+    @Mutation(() => SuccessResponse)
     async refreshTokens(
         @Ctx() ctx: CustomContext
-    ): Promise<AuthResponse | Error> {
+    ): Promise<SuccessResponse | Error> {
         const {
             req: {
                 cookies: { accessToken, idToken, refreshToken },
@@ -54,18 +45,18 @@ export class AuthResolver {
         await refreshTokens({ accessToken, idToken, refreshToken })
             .then(setCookies(res))
             .catch(() => {
-                return new AuthResponse(false)
+                return new SuccessResponse(false)
             })
 
-        return new AuthResponse(true)
+        return new SuccessResponse(true)
     }
 
     @UseMiddleware(isAuthenticated)
-    @Mutation(() => AuthResponse)
+    @Mutation(() => SuccessResponse)
     async logout(
         @Ctx() ctx: CustomContext
         // @PubSub() pubSub: PubSubEngine
-    ): Promise<AuthResponse | Error> {
+    ): Promise<SuccessResponse | Error> {
         const { res } = ctx
 
         // await pubSub.publish(USER_ONLINE, { id, online: false })
@@ -74,14 +65,14 @@ export class AuthResolver {
         res.clearCookie('refreshToken')
         res.clearCookie('idToken')
 
-        return new AuthResponse(true)
+        return new SuccessResponse(true)
     }
 
-    @Mutation(() => AuthResponse)
+    @Mutation(() => SuccessResponse)
     async login(
         @Arg('input') authArgs: AuthArgs,
         @Ctx() ctx: CustomContext
-    ): Promise<AuthResponse | Error> {
+    ): Promise<SuccessResponse | Error> {
         const { res, prisma } = ctx
 
         const { accessToken, idToken, refreshToken } = authArgs
@@ -116,8 +107,8 @@ export class AuthResolver {
                     id_token: idToken,
                 },
             })
-            return new AuthResponse(true)
+            return new SuccessResponse(true)
         }
-        return new AuthResponse(false)
+        return new SuccessResponse(false)
     }
 }

@@ -1,44 +1,26 @@
-import { Field, Float, InputType } from 'type-graphql';
+import { Arg, Ctx, Field, Float, InputType, Mutation, PubSub, PubSubEngine, Resolver, UseMiddleware } from 'type-graphql';
+import { isAuthenticated } from '../../middlewares/isAuthenticated';
+import { CustomContext } from '../../types/customContext';
+import { SuccessResponse } from '../../types/SuccessResponse';
+import { PositionArgs, UserLocation } from '../../utils/redis/location';
 
-@InputType()
-class PositionArgs {
-
-    @Field((type) => Float)
-    latitude!: number
-
-    @Field((type) => Float)
-    longitude!: number
-}
-
-// @Resolver(Userposition)
+@Resolver(SuccessResponse)
 export class UserPositionResolver {
 
-    // @UseMiddleware(isAuthenticated)
-    // @Mutation(returns => Userposition)
-    // async setCurrentPosition(
-    //     @Arg("input") position: PositionArgs,
-    //     @Ctx() ctx: CustomContext,
-    //     @PubSub() pubSub: PubSubEngine
-    // ): Promise<Userposition> {
-    //     const { req: { claims: { id } }, prisma } = ctx
+    @UseMiddleware(isAuthenticated)
+    @Mutation(() => SuccessResponse)
+    async updatePosition(
+        @Arg("input") position: PositionArgs,
+        @Ctx() ctx: CustomContext,
+        @PubSub() pubSub: PubSubEngine
+    ): Promise<SuccessResponse> {
+        const { user } = ctx
 
-    //     const userPositionResponse = await prisma.userposition.upsert({
-    //         where: {
-    //             userid: id
-    //         },
-    //         update: {
-    //             ...position
-    //         },
-    //         create: {
-    //             user: { connect: { id } },
-    //             ...position
-    //         }
-    //     })
+        const location = new UserLocation(user.id)
 
-    //     const payload = { ...userPositionResponse, userid: id, }
+        location.set(position)
+        // await pubSub.publish(LOCATION_UPDATE, payload);
 
-    //     await pubSub.publish(LOCATION_UPDATE, payload);
-
-    //     return userPositionResponse;
-    // }
+        return { success: true };
+    }
 }
