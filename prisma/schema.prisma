@@ -32,6 +32,6 @@ model request {
   finished_at DateTime
   customer_id String   @unique
   supplier_id String   @unique
-  supplier    user     @relation(name: "supplier", fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  supplier    user     @relation(name: "supplier", fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   customer    user     @relation(name: "customer", fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
