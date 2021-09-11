@@ -10,7 +10,7 @@ export interface Claims {
 }
 
 export interface CustomContext {
-    req: Request & { claims: Claims }
+    req: Request
     res: Response
     user: Claims
     prisma: PrismaClient

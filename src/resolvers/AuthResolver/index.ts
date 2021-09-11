@@ -11,8 +11,8 @@ import {
     Resolver,
     UseMiddleware,
 } from 'type-graphql'
-import { CustomContext } from '../../context/types'
 import { isAuthenticated } from '../../middlewares/isAuthenticated'
+import { CustomContext } from '../../types/customContext'
 import { setCookies } from '../../utils'
 import { getUserProfile, refreshTokens, validateToken } from '../../utils/auth'
 import { USER_ONLINE } from '../SubscriptionTypes'
@@ -65,7 +65,7 @@ export class AuthResolver {
 
     @UseMiddleware(isAuthenticated)
     @Mutation(() => AuthResponse)
-    async signOut(
+    async signout(
         @Ctx() ctx: any,
         @PubSub() pubSub: PubSubEngine
     ): Promise<AuthResponse | Error> {
@@ -86,7 +86,7 @@ export class AuthResolver {
     }
 
     @Mutation(() => AuthResponse)
-    async logIn(
+    async login(
         @Arg('input') authArgs: AuthArgs,
         @Ctx() ctx: CustomContext
     ): Promise<AuthResponse | Error> {

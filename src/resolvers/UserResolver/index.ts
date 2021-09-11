@@ -12,9 +12,9 @@ import {
     Subscription,
     UseMiddleware,
 } from 'type-graphql'
-import { CustomContext } from '../../context/types'
 import { User } from '../../generated/type-graphql'
 import { isAuthenticated } from '../../middlewares/isAuthenticated'
+import { CustomContext } from '../../types/customContext'
 import { LOCATION_UPDATE, USER_ONLINE } from '../SubscriptionTypes'
 
 const toRadians = (v: number) => (v * Math.PI) / 180
@@ -79,42 +79,12 @@ export class UserByIdArgs {
 
 @InputType()
 class TrackedUsersArgs {
-    @Field((type) => [String])
+    @Field(() => [String])
     ids!: string[]
-}
-
-@InputType()
-class NameEmailSearchArgs {
-    @Field((type) => String)
-    search!: string
 }
 
 @Resolver(User)
 export class UserResolver {
-    // @UseMiddleware(isAuthenticated)
-    // @Query(returns => User)
-    // async getUserData(
-    //     @Ctx() ctx: CustomContext,
-    //     @PubSub() pubSub: PubSubEngine
-    // ) {
-
-    //     const { req: { claims: { id, name, email, picture: image } }, prisma } = ctx
-
-    //     await pubSub.publish(USER_ONLINE, { id, online: true });
-
-    //     return prisma.user.upsert({
-    //         where: {
-    //             id
-    //         },
-    //         update: {
-    //             id, name, email, image, online: true
-    //         },
-    //         create: {
-    //             id, name, email, image, online: true
-    //         }
-    //     })
-    // }
-
     @UseMiddleware(isAuthenticated)
     @Query(() => User)
     async getUserById(

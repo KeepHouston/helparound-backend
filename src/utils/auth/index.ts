@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { OAuth2Client } from 'google-auth-library'
-import { Claims } from '../../context/types'
+import { Claims } from '../../types/customContext'
 
 export const validateToken = async (token: any, clientId: string) => {
     const tokenPayload = await loadTokenPayload(token)

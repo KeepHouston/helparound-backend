@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import { RefreshAccessTokenResponse } from 'google-auth-library/build/src/auth/oauth2client'
 import * as R from 'rambda'
-import { Claims } from '../context/types'
+import { Claims } from '../types/customContext'
 import { getUserProfile, validateToken } from './auth'
 
 export const parseCookies = (request: Request): Request => {
