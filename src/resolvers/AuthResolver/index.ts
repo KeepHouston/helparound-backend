@@ -94,18 +94,12 @@ export class AuthResolver {
 
         const { accessToken, idToken, refreshToken } = authArgs
 
-        const validAccessToken = await validateToken(
-            { accessToken },
-            process.env.GOOGLE_CLIENT_ID || ''
-        )
-        const validIdToken = await validateToken(
-            { idToken },
-            process.env.GOOGLE_CLIENT_ID || ''
-        )
+        const validAccessToken = await validateToken(accessToken, 'accessToken')
+        const validIdToken = await validateToken(idToken, 'idToken')
         const userProfile = await getUserProfile(accessToken)
 
         if (validAccessToken && validIdToken && userProfile) {
-            prisma.user.upsert({
+            await prisma.user.upsert({
                 create: {
                     avatar: userProfile.picture,
                     name: userProfile.name,
@@ -119,6 +113,7 @@ export class AuthResolver {
                 where: { id: userProfile.id },
             })
 
+            console.log('hi')
             setCookies(res)({
                 credentials: {
                     access_token: accessToken,

@@ -2,15 +2,25 @@ import axios from 'axios'
 import { OAuth2Client } from 'google-auth-library'
 import { Claims } from '../../types/customContext'
 
-export const validateToken = async (token: any, clientId: string) => {
-    const tokenPayload = await loadTokenPayload(token)
+const clientId = process.env.GOOGLE_CLIENT_ID || ''
 
-    const { aud, exp } = tokenPayload
-    if (aud === clientId && exp < Date.now()) {
-        return tokenPayload
+export const validateToken = async (
+    token: string,
+    type: 'accessToken' | 'idToken' | 'refreshToken'
+) => {
+    const url = `https://oauth2.googleapis.com/tokeninfo?${type}=${token}`
+
+    try {
+        const { data } = await axios.get(url)
+        const { aud, exp } = data
+        if (aud === clientId && exp < Date.now()) {
+            return data
+        }
+
+        return null
+    } catch (error: any) {
+        return error
     }
-
-    return null
 }
 
 export const getUserProfile = async (accessToken: string): Promise<Claims> => {
@@ -24,17 +34,7 @@ export const getUserProfile = async (accessToken: string): Promise<Claims> => {
     }
 }
 
-const loadTokenPayload = async (token: any) => {
-    const [tokenName, tokenValue] = Object.entries(token)[0]
-    const url = `https://oauth2.googleapis.com/tokeninfo?${tokenName}=${tokenValue}`
-
-    try {
-        const { data } = await axios.get(url)
-        return data
-    } catch (error: any) {
-        return error
-    }
-}
+const loadTokenPayload = async (token: any) => {}
 
 export const refreshTokens = async (tokens: any) => {
     const oauth2Client = new OAuth2Client(

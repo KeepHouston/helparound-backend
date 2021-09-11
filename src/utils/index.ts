@@ -26,14 +26,8 @@ export const getClaims = async (req: Request): Promise<Claims | null> => {
         cookies: { accessToken, idToken },
     } = req
 
-    const validAccessToken = await validateToken(
-        { accessToken },
-        process.env.GOOGLE_CLIENT_ID || ''
-    )
-    const validIdToken = await validateToken(
-        { idToken },
-        process.env.GOOGLE_CLIENT_ID || ''
-    )
+    const validAccessToken = await validateToken(accessToken, 'accessToken')
+    const validIdToken = await validateToken(idToken, 'idToken')
     const userProfile = await getUserProfile(accessToken)
 
     if (validAccessToken && validIdToken && userProfile) {
