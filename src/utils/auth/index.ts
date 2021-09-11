@@ -17,8 +17,9 @@ export const validateToken = async (
             return data
         }
 
-        return null
+        return data
     } catch (error: any) {
+        console.error({ error })
         return error
     }
 }
@@ -33,8 +34,6 @@ export const getUserProfile = async (accessToken: string): Promise<Claims> => {
         return error
     }
 }
-
-const loadTokenPayload = async (token: any) => {}
 
 export const refreshTokens = async (tokens: any) => {
     const oauth2Client = new OAuth2Client(

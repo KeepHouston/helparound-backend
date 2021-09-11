@@ -113,7 +113,6 @@ export class AuthResolver {
                 where: { id: userProfile.id },
             })
 
-            console.log('hi')
             setCookies(res)({
                 credentials: {
                     access_token: accessToken,
