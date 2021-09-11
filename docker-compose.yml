@@ -1,0 +1,16 @@
+version: '3.1'
+services:
+  peerServer:
+    image: "peerjs/peerjs-server"
+    ports:
+      - 9000:9000
+  database:
+    image: "postgres"
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    volumes:
+      - database-data:/var/lib/postgresql/data/
+volumes:
+  database-data:
