@@ -29,7 +29,7 @@ async function bootstrap() {
 
     const schema = await buildSchema({
         resolvers,
-        // pubSub
+        pubSub,
     })
 
     const server = new ApolloServer({

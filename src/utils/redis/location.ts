@@ -16,7 +16,7 @@ export class UserLocation {
         }
         const redis = await redisClient()
 
-        redis.set(this.storageKey, JSON.stringify(location))
+        return redis.set(this.storageKey, JSON.stringify(location))
     }
 
     async get(): Promise<Location | null> {
@@ -32,6 +32,6 @@ export class UserLocation {
     }
 
     async update(updater: (data: Location | null) => Location | null) {
-        this.set(updater(await this.get()))
+        return this.set(updater(await this.get()))
     }
 }
