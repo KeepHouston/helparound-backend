@@ -10,6 +10,7 @@ import { SubscriptionServer } from 'subscriptions-transport-ws'
 import { buildSchema } from 'type-graphql'
 import { CustomContext } from './context/types'
 import { resolvers } from './resolvers'
+import { getClaims } from './utils'
 import { redisClient } from './utils/redis'
 
 require('dotenv').config()
@@ -44,17 +45,17 @@ async function bootstrap() {
                 },
             },
         ],
-        context: async ({
-            req,
-            res,
-            ...rest
-        }: any): Promise<CustomContext> => ({
-            req,
-            res,
-            prisma,
-            redis,
-            ...rest,
-        }),
+        context: async ({ req, res, ...rest }: any): Promise<CustomContext> => {
+            const claims = await getClaims(req)
+            return {
+                req,
+                res,
+                prisma,
+                user: claims,
+                redis,
+                ...rest,
+            }
+        },
     })
     const subscriptionServer = SubscriptionServer.create(
         {

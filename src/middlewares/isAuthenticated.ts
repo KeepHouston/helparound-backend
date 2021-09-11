@@ -1,18 +1,16 @@
-import { AuthenticationError } from "apollo-server-express";
-import { MiddlewareFn } from "type-graphql";
-import { CustomContext } from "../context/types";
-import { getClaims } from "../utils";
+import { AuthenticationError } from 'apollo-server-express'
+import { MiddlewareFn } from 'type-graphql'
+import { CustomContext } from '../context/types'
 
-export const isAuthenticated: MiddlewareFn<CustomContext> = async ({ context }, next) => {
+export const isAuthenticated: MiddlewareFn<CustomContext> = async (
+    { context },
+    next
+) => {
+    const { user } = context
 
-    const { req, res } = context
-    const claims = await getClaims(req)
-
-    if (claims === null) {
-
+    if (user === null) {
         throw new AuthenticationError('Not authenticated!')
     }
 
-    req.claims = claims
-    return next();
-};
+    return next()
+}

@@ -12,6 +12,7 @@ export interface Claims {
 export interface CustomContext {
     req: Request & { claims: Claims }
     res: Response
+    user: Claims
     prisma: PrismaClient
     redis: ReturnType<typeof redisClient>
 }

@@ -131,6 +131,16 @@ export class UserResolver {
         })
     }
 
+    @UseMiddleware(isAuthenticated)
+    @Query(() => User)
+    async me(@Ctx() ctx: CustomContext): Promise<User | null> {
+        const { prisma, user } = ctx
+
+        return await prisma.user.findUnique({
+            where: { id: user.id },
+        })
+    }
+
     // @UseMiddleware(isAuthenticated)
     // @Query((returns) => [User])
     // async getRecentUsersRelations(@Ctx() ctx: CustomContext): Promise<User[]> {
