@@ -1,20 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 import { ApolloServer } from "apollo-server-express";
 import cookieParser from 'cookie-parser';
-import express, { Request } from "express";
+import express from "express";
+import { execute, subscribe } from 'graphql';
 import { PubSub } from 'graphql-subscriptions';
-import { createServer } from "http";
+import { createServer } from 'http';
 import "reflect-metadata";
+import { SubscriptionServer } from 'subscriptions-transport-ws';
 import { buildSchema } from 'type-graphql';
-import { Claims } from "./context/types";
 import { resolvers } from './resolvers';
-import { USER_ONLINE } from "./resolvers/SubscriptionTypes";
-import { getClaims, parseCookies } from './utils';
+
 
 require('dotenv').config()
-
-
-
 
 async function bootstrap() {
 
@@ -30,35 +27,42 @@ async function bootstrap() {
 
   const schema = await buildSchema({
     resolvers,
-    pubSub
+    // pubSub
   });
 
-
   const server = new ApolloServer({
-    schema,
-    //@ts-ignore
-    subscriptions: {
-      path: "/",
-      onConnect: async (params, wsocket, wscontext) => {
-        console.log(`Client connected for subscriptions`);
+    schema,plugins: [{
+    async serverWillStart() {
+      return {
+        async drainServer() {
+          subscriptionServer.close();
+        }
+      };
+    }
+  }],
 
-        const claims: Claims | null = await getClaims(parseCookies(<Request>wscontext.request))
+    // subscriptions: {
+    //   path: "/",
+    //   onConnect: async (params, wsocket, wscontext) => {
+    //     console.log(`Client connected for subscriptions`);
 
-        claims && await pubSub.publish(USER_ONLINE, { id: claims.id, online: true });
+    //     const claims: Claims | null = await getClaims(parseCookies(<Request>wscontext.request))
 
-        return { claims, prisma }
+    //     claims && await pubSub.publish(USER_ONLINE, { id: claims.id, online: true });
 
-      },
-      onDisconnect: async (wsocket, wscontext) => {
-        const { claims } = await wscontext.initPromise;
+    //     return { claims, prisma }
 
-        const { id } = claims ?? {}
+    //   },
+    //   onDisconnect: async (wsocket, wscontext) => {
+    //     const { claims } = await wscontext.initPromise;
 
-        id && await pubSub.publish(USER_ONLINE, { id, online: false });
+    //     const { id } = claims ?? {}
 
-        console.log("Client disconnected from subscriptions");
-      },
-    },
+    //     id && await pubSub.publish(USER_ONLINE, { id, online: false });
+
+    //     console.log("Client disconnected from subscriptions");
+    //   },
+    // },
 
     context: async ({ req, res, ...rest }: any) => ({
       req,
@@ -67,14 +71,28 @@ async function bootstrap() {
       ...rest
     }),
   });
+const subscriptionServer = SubscriptionServer.create({
+   // This is the `schema` we just created.
+   schema,
+   // These are imported from `graphql`.
+   execute,
+   subscribe,
+}, {
+   // This is the `httpServer` we created in a previous step.
+   server: httpServer,
+   // This `server` is the instance returned from `new ApolloServer`.
+   path: server.graphqlPath,
+});
+
+
+  await server.start();
 
   server.applyMiddleware({ app })
 
-  server.installSubscriptionHandlers(httpServer);
-
+  const PORT = process.env.SERVER_PORT || '3001'
   httpServer.listen(
-    parseInt(process.env.SERVER_PORT || ''),
-    () => console.log("server started on ", process.env.SERVER_PORT)
+    parseInt(PORT),
+    () => console.log(`Server is now running on http://localhost:${PORT}/graphql`)
   )
 }
 
