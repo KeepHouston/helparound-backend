@@ -1,10 +1,8 @@
 import { Field, Float, InputType, ObjectType } from 'type-graphql'
 import { redisClient } from '.'
 
-
 @InputType()
 export class PositionArgs {
-
     @Field((type) => Float)
     latitude!: number
 
@@ -14,7 +12,6 @@ export class PositionArgs {
 
 @ObjectType()
 export class PositionObject {
-
     @Field((type) => Float)
     latitude!: number
 

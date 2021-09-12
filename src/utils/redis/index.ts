@@ -13,9 +13,12 @@ export async function redisClient() {
     return client
 }
 
-export async function redisIterate(redis: Promise<RedisClientType<RedisModules, RedisLuaScripts>>, iterateCallback: (key: string, value: string) => any) {
-    const client = await redis  
+export async function redisIterate(
+    redis: Promise<RedisClientType<RedisModules, RedisLuaScripts>>,
+    iterateCallback: (key: string, value: string) => any
+) {
+    const client = await redis
     for await (const key of client.scanIterator()) {
-        iterateCallback(key, await client.get(key));
+        iterateCallback(key, await client.get(key))
     }
 }

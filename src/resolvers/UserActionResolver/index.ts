@@ -1,3 +1,4 @@
+import * as R from 'rambda'
 import {
     Arg,
     Ctx,
@@ -18,10 +19,17 @@ import { CustomContext } from '../../types/customContext'
 import { RequestStatus } from '../../types/enums'
 import { SuccessResponse } from '../../types/SuccessResponse'
 import { redisIterate } from '../../utils/redis'
-import { PositionArgs, PositionObject, UserLocation } from '../../utils/redis/location'
-import { NEED_HELP_REQUEST, OUTCOMING_REQUEST_ACCEPTED, REQUEST_APPROVED } from '../SubscriptionTypes'
+import {
+    PositionArgs,
+    PositionObject,
+    UserLocation,
+} from '../../utils/redis/location'
+import {
+    NEED_HELP_REQUEST,
+    OUTCOMING_REQUEST_ACCEPTED,
+    REQUEST_APPROVED,
+} from '../SubscriptionTypes'
 import { distanceCalculator } from '../UserResolver'
-import * as R from 'rambda'
 @InputType()
 class HelpMeActionArgs {
     @Field(() => String)
@@ -33,14 +41,12 @@ class HelpMeActionArgs {
 
 @ObjectType()
 class SuccessWithRequest extends SuccessResponse {
-
     @Field(() => String)
     requestId!: string
 }
 
 @ObjectType()
 class HelpMeAction {
-
     @Field(() => String)
     id!: string
 
@@ -53,7 +59,6 @@ class HelpMeAction {
 
 @ObjectType()
 class OutcomingRequestAcceptedAction {
-
     @Field(() => String)
     requestId!: string
 
@@ -105,30 +110,36 @@ export class UserActionResolver {
 
         const location = await new UserLocation(user.id).get()
 
-        const requestor = await prisma.user.findUnique({ where: { id: user.id } })
-
-        const unsortedUsers: { userId: string, distance: number }[] = []
-
-        location && await redisIterate(redis, (key, value) => {
-
-            const _user = (<PositionArgs>JSON.parse(value))
-
-            const distance = distanceCalculator(
-                location.latitude,
-                location.longitude,
-                _user.latitude,
-                _user.longitude
-            )
-
-            const splittedKey = key.split(":")[1]
-
-
-            unsortedUsers.push({ userId: splittedKey, distance })
-
+        const requestor = await prisma.user.findUnique({
+            where: { id: user.id },
         })
 
-        pubSub.publish(NEED_HELP_REQUEST, { users: unsortedUsers.sort((a, b) => a.distance - b.distance).slice(0, Math.min(15, unsortedUsers.length)), request: { ...requestArgs, id: requestId }, requestor, location })
+        const unsortedUsers: { userId: string; distance: number }[] = []
 
+        location &&
+            (await redisIterate(redis, (key, value) => {
+                const _user = <PositionArgs>JSON.parse(value)
+
+                const distance = distanceCalculator(
+                    location.latitude,
+                    location.longitude,
+                    _user.latitude,
+                    _user.longitude
+                )
+
+                const splittedKey = key.split(':')[1]
+
+                unsortedUsers.push({ userId: splittedKey, distance })
+            }))
+
+        pubSub.publish(NEED_HELP_REQUEST, {
+            users: unsortedUsers
+                .sort((a, b) => a.distance - b.distance)
+                .slice(0, Math.min(15, unsortedUsers.length)),
+            request: { ...requestArgs, id: requestId },
+            requestor,
+            location,
+        })
 
         return { requestId }
     }
@@ -148,10 +159,12 @@ export class UserActionResolver {
             },
             data: {
                 status: RequestStatus.COMPLETED,
-            }
+            },
         })
 
-        pubSub.publish(REQUEST_APPROVED, { requestId: acceptRequestArgs.requestId })
+        pubSub.publish(REQUEST_APPROVED, {
+            requestId: acceptRequestArgs.requestId,
+        })
         return { success: true }
     }
 
@@ -174,11 +187,14 @@ export class UserActionResolver {
             },
             data: {
                 status: RequestStatus.ONGOING,
-                supplier_id: user.id
-            }
+                supplier_id: user.id,
+            },
         })
 
-        pubSub.publish(OUTCOMING_REQUEST_ACCEPTED, { requestId, acceptorLocation: location })
+        pubSub.publish(OUTCOMING_REQUEST_ACCEPTED, {
+            requestId,
+            acceptorLocation: location,
+        })
 
         return { success: true }
     }
@@ -187,7 +203,7 @@ export class UserActionResolver {
     @Mutation(() => SuccessResponse)
     async declineRequest(
         @Ctx() ctx: CustomContext,
-        @Arg('input') acceptRequestArgs: AcceptRequestArgs,
+        @Arg('input') acceptRequestArgs: AcceptRequestArgs
     ): Promise<SuccessResponse | null> {
         const { prisma } = ctx
 
@@ -197,9 +213,8 @@ export class UserActionResolver {
             },
             data: {
                 status: RequestStatus.CANCELLED,
-            }
+            },
         })
-
 
         return { success: true }
     }
@@ -214,7 +229,10 @@ export class UserActionResolver {
     })
     async incomingRequest(
         @Ctx() ctx: CustomContext,
-        @Root() requestNearby: RequestNearby & { users: { userId: string, distance: number }[] }
+        @Root()
+        requestNearby: RequestNearby & {
+            users: { userId: string; distance: number }[]
+        }
     ): Promise<RequestNearby> {
         return R.omit(['users'], requestNearby)
     }
@@ -225,7 +243,10 @@ export class UserActionResolver {
             const { prisma, user } = context
             const { id } = user
 
-            const resp = await prisma.request.findUnique({ where: { id: payload.requestId }, include: { customer: true } })
+            const resp = await prisma.request.findUnique({
+                where: { id: payload.requestId },
+                include: { customer: true },
+            })
 
             return resp.customer_id === id
         },
@@ -243,7 +264,10 @@ export class UserActionResolver {
             const { prisma, user } = context
             const { id } = user
 
-            const resp = await prisma.request.findUnique({ where: { id: payload.requestId }, include: { supplier: true } })
+            const resp = await prisma.request.findUnique({
+                where: { id: payload.requestId },
+                include: { supplier: true },
+            })
 
             return resp.supplier_id === id
         },

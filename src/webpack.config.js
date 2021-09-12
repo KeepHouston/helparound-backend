@@ -1,17 +1,18 @@
-const path = require('path');
+const path = require('path')
 
 module.exports = {
     externals: [
         nodeExternals(),
         nodeExternals({
-          modulesDir: path.resolve(__dirname, "../../../node_modules"),
+            modulesDir: path.resolve(__dirname, '../../../node_modules'),
         }),
-  ],
-      resolve: {
+    ],
+    resolve: {
         alias: {
-            graphql$: path.resolve(__dirname, './node_modules/graphql/index.js'),
+            graphql$: path.resolve(
+                __dirname,
+                './node_modules/graphql/index.js'
+            ),
         },
-
     },
-  };
-  
+}
