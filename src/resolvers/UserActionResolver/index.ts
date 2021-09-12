@@ -54,12 +54,14 @@ export class UserActionResolver {
     ): Promise<SuccessResponse | null> {
         const { prisma, redis, user } = ctx
 
-        await (<any>prisma).request.create({
+        console.log(user, requestArgs);
+        
+        await prisma.request.create({
             data: {
                 description: requestArgs.description,
                 customer_id: user.id,
                 is_in_place: requestArgs.inplace,
-            }
+            },
         })
 
         const location = await new UserLocation(user.id).get()
@@ -115,7 +117,6 @@ export class UserActionResolver {
         await prisma.request.update({
             where: {
                 id: acceptRequestArgs.requestId,
-                customer_id: user.id
             },
             data: {
                 status: RequestStatus.COMPLETED,
