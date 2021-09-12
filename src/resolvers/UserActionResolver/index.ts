@@ -106,13 +106,13 @@ export class UserActionResolver {
 
     @UseMiddleware(isAuthenticated)
     @Mutation(() => SuccessResponse)
-    async acceptRequest(
+    async approveRequest(
         @Ctx() ctx: CustomContext,
         @Arg('input') acceptRequestArgs: AcceptRequestArgs,
     ): Promise<SuccessResponse | null> {
-        const { prisma, redis, user } = ctx
+        const { prisma, user } = ctx
 
-        prisma.request.update({
+        await prisma.request.update({
             where: {
                 id: acceptRequestArgs.requestId,
                 customer_id: user.id
@@ -125,6 +125,26 @@ export class UserActionResolver {
         return { success: true }
     }
 
+    @UseMiddleware(isAuthenticated)
+    @Mutation(() => SuccessResponse)
+    async acceptRequest(
+        @Ctx() ctx: CustomContext,
+        @Arg('input') acceptRequestArgs: AcceptRequestArgs,
+    ): Promise<SuccessResponse | null> {
+        const { prisma, user } = ctx
+
+        await prisma.request.update({
+            where: {
+                id: acceptRequestArgs.requestId,
+            },
+            data: {
+                status: RequestStatus.ONGOING,
+                supplier_id: user.id
+            }
+        })
+
+        return { success: true }
+    }
     // @Subscription(() => RequestNearby, {
     //     topics: NEED_HELP_REQUEST,
     //     filter: ({ payload, context: { connection } }: any) => {
