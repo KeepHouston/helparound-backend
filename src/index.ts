@@ -12,92 +12,90 @@ import { resolvers } from './resolvers'
 import { Claims, CustomContext } from './types/customContext'
 import { getClaims, parseCookies } from './utils'
 import { redisClient } from './utils/redis'
+import { UserLocation } from './utils/redis/location'
 
 require('dotenv').config()
 
 async function bootstrap() {
-    const app = express()
+  const app = express()
 
-    app.use(cookieParser())
+  app.use(cookieParser())
 
-    const httpServer = createServer(app)
+  const httpServer = createServer(app)
 
-    const pubSub = new PubSub()
+  const pubSub = new PubSub()
 
-    const prisma = new PrismaClient()
-    const redis = await redisClient()
+  const prisma = new PrismaClient()
+  const redis = await redisClient()
 
-    const schema = await buildSchema({
-        resolvers,
-        pubSub,
-    })
+  const schema = await buildSchema({
+    resolvers,
+    pubSub,
+  })
 
-    const server = new ApolloServer({
-        schema,
-        plugins: [
-            {
-                async serverWillStart() {
-                    return {
-                        async drainServer() {
-                            subscriptionServer.close()
-                        },
-                    }
-                },
+  const server = new ApolloServer({
+    schema,
+    plugins: [
+      {
+        async serverWillStart() {
+          return {
+            async drainServer() {
+              subscriptionServer.close()
             },
-        ],
-        context: async ({ req, res, ...rest }: any): Promise<CustomContext> => {
-            let claims
-            try {
-                claims = await getClaims(req)
-            } catch {
-                claims = null
-            }
-            return {
-                req,
-                res,
-                prisma,
-                user: claims,
-                redis,
-                ...rest,
-            }
+          }
         },
-    })
-    const subscriptionServer = SubscriptionServer.create(
-        {
-          
-            schema,
-            execute,
-            subscribe,
-            //@ts-ignore
-            onConnect: async (params, wsocket, wscontext) => {        
-                const user: Claims | null = await getClaims(parseCookies(<Request>wscontext.request))
-                
-                return { user, prisma, redis }
-              },
-              // onDisconnect: async (wsocket, wscontext) => {
-              //   const { claims } = await wscontext.initPromise;
-        
-              //   const { id } = claims ?? {}
-                
-              //   id && await pubSub.publish(USER_ONLINE, { id, online: false });
-        
-              //   console.log("Client disconnected from subscriptions");
-              // },
-        },
-        {
-            server: httpServer,
-            path: server.graphqlPath,
-        }
-    )
+      },
+    ],
+    context: async ({ req, res, ...rest }: any): Promise<CustomContext> => {
+      let claims
+      try {
+        claims = await getClaims(req)
+      } catch {
+        claims = null
+      }
+      return {
+        req,
+        res,
+        prisma,
+        user: claims,
+        redis,
+        ...rest,
+      }
+    },
+  })
+  const subscriptionServer = SubscriptionServer.create(
+    {
 
-    await server.start()
+      schema,
+      execute,
+      subscribe,
+      //@ts-ignore
+      onConnect: async (params, wsocket, wscontext) => {
+        const user: Claims | null = await getClaims(parseCookies(<Request>wscontext.request))
 
-    server.applyMiddleware({ app })
+        return { user, prisma, redis }
+      },
+      //@ts-ignore
+      onDisconnect: async (wsocket, wscontext) => {
+        const { user } = await wscontext.initPromise;
 
-    const PORT = process.env.SERVER_PORT || '3001'
-    httpServer.listen(parseInt(PORT), () =>
-        console.log(`Server is now running on http://localhost:${PORT}/graphql`)
-    )
+        await new UserLocation(user.id).delete()
+      },
+    },
+    {
+      server: httpServer,
+      path: server.graphqlPath,
+    }
+  )
+
+  await server.start()
+
+  server.applyMiddleware({ app })
+
+  const PORT = process.env.SERVER_PORT || '3001'
+  httpServer.listen(parseInt(PORT), () =>
+    console.log(`Server is now running on http://localhost:${PORT}/graphql`)
+  )
 }
 
 bootstrap()

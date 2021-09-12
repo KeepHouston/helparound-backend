@@ -36,6 +36,12 @@ export class UserLocation {
         return redis.set(this.storageKey, JSON.stringify(location))
     }
 
+    async delete() {
+        const redis = await redisClient()
+
+        return redis.del(this.storageKey)
+    }
+
     async get(): Promise<PositionArgs | null> {
         const redis = await redisClient()
 

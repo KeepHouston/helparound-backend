@@ -210,7 +210,7 @@ export class UserActionResolver {
         return R.omit(['users'], requestNearby)
     }
 
-    @Subscription(() => RequestNearby, {
+    @Subscription(() => OutcomingRequestAcceptedAction, {
         topics: OUTCOMING_REQUEST_ACCEPTED,
         filter: async ({ context, payload }: any) => {
             const { prisma, user } = context
