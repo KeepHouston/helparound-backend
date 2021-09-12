@@ -24,12 +24,12 @@ model user {
 
 model request {
   id          String   @id @default(uuid())
-  status      String
+  status      String   @default("pending")
   description String
   is_in_place Boolean
-  grade       Int
-  started_at  DateTime
-  finished_at DateTime
+  grade       Int      @default(0)
+  started_at  DateTime @default(now())
+  finished_at DateTime @updatedAt
   customer_id String   @unique
   supplier_id String?  @unique
   supplier    user?    @relation(name: "supplier", fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
