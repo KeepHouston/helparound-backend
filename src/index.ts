@@ -74,6 +74,15 @@ async function bootstrap() {
                 
                 return { user, prisma, redis }
               },
+              // onDisconnect: async (wsocket, wscontext) => {
+              //   const { claims } = await wscontext.initPromise;
+        
+              //   const { id } = claims ?? {}
+                
+              //   id && await pubSub.publish(USER_ONLINE, { id, online: false });
+        
+              //   console.log("Client disconnected from subscriptions");
+              // },
         },
         {
             server: httpServer,

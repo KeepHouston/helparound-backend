@@ -19,7 +19,7 @@ import { RequestStatus } from '../../types/enums'
 import { SuccessResponse } from '../../types/SuccessResponse'
 import { redisIterate } from '../../utils/redis'
 import { PositionArgs, PositionObject, UserLocation } from '../../utils/redis/location'
-import { NEED_HELP_REQUEST } from '../SubscriptionTypes'
+import { NEED_HELP_REQUEST, OUTCOMING_REQUEST_ACCEPTED } from '../SubscriptionTypes'
 import { distanceCalculator } from '../UserResolver'
 import * as R from 'rambda'
 @InputType()
@@ -33,11 +33,25 @@ class HelpMeActionArgs {
 
 @ObjectType()
 class HelpMeAction {
+
+    @Field(() => String)
+    id!: string
+
     @Field(() => String)
     description!: string
 
     @Field(() => Boolean)
     inplace!: boolean
+}
+
+@ObjectType()
+class OutcomingRequestAcceptedAction {
+
+    @Field(() => String)
+    requestId!: string
+
+    @Field(() => PositionObject)
+    acceptorLocation!: PositionObject
 }
 
 @InputType()
@@ -106,7 +120,7 @@ export class UserActionResolver {
 
         })
 
-        pubSub.publish(NEED_HELP_REQUEST, { users: unsortedUsers.sort((a, b) => a.distance - b.distance).slice(0, Math.min(15, unsortedUsers.length)), request: requestArgs, requestor, location })
+        pubSub.publish(NEED_HELP_REQUEST, { users: unsortedUsers.sort((a, b) => a.distance - b.distance).slice(0, Math.min(15, unsortedUsers.length)), request: { ...requestArgs, id: requestId }, requestor, location })
 
 
         return { requestId }
@@ -137,12 +151,17 @@ export class UserActionResolver {
     async acceptRequest(
         @Ctx() ctx: CustomContext,
         @Arg('input') acceptRequestArgs: AcceptRequestArgs,
+        @PubSub() pubSub: PubSubEngine
     ): Promise<SuccessResponse | null> {
         const { prisma, user } = ctx
 
+        const { requestId } = acceptRequestArgs
+
+        const location = await new UserLocation(user.id).get()
+        
         await prisma.request.update({
             where: {
-                id: acceptRequestArgs.requestId,
+                id: requestId,
             },
             data: {
                 status: RequestStatus.ONGOING,
@@ -150,6 +169,7 @@ export class UserActionResolver {
             }
         })
 
+        pubSub.publish(OUTCOMING_REQUEST_ACCEPTED, { requestId, acceptorLocation: location})
 
         return { success: true }
     }
@@ -174,6 +194,7 @@ export class UserActionResolver {
 
         return { success: true }
     }
+
     @Subscription(() => RequestNearby, {
         topics: NEED_HELP_REQUEST,
         filter: ({ context, payload }: any) => {
@@ -184,9 +205,27 @@ export class UserActionResolver {
     })
     async incomingRequest(
         @Ctx() ctx: CustomContext,
-        @Root() requestNearby: RequestNearby & { users: {userId: string, distance: number}[] }
+        @Root() requestNearby: RequestNearby & { users: { userId: string, distance: number }[] }
     ): Promise<RequestNearby> {
         return R.omit(['users'], requestNearby)
+    }
+
+    @Subscription(() => RequestNearby, {
+        topics: OUTCOMING_REQUEST_ACCEPTED,
+        filter: async ({ context, payload }: any) => {
+            const { prisma, user } = context
+            const { id } = user
+
+            const resp = await prisma.request.findUnique({ where: { id: payload.requestId }, include: { customer: true } })
+
+            return resp.customer_id === id
+        },
+    })
+    async outcomingRequestAccepted(
+        @Ctx() ctx: CustomContext,
+        @Root() outcomingRequestAcceptedAction: OutcomingRequestAcceptedAction
+    ): Promise<OutcomingRequestAcceptedAction> {
+        return outcomingRequestAcceptedAction
     }
 
 }
