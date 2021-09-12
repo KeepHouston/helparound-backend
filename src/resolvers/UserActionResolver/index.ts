@@ -154,6 +154,26 @@ export class UserActionResolver {
         return { success: true }
     }
 
+    @UseMiddleware(isAuthenticated)
+    @Mutation(() => SuccessResponse)
+    async declineRequest(
+        @Ctx() ctx: CustomContext,
+        @Arg('input') acceptRequestArgs: AcceptRequestArgs,
+    ): Promise<SuccessResponse | null> {
+        const { prisma } = ctx
+
+        await prisma.request.update({
+            where: {
+                id: acceptRequestArgs.requestId,
+            },
+            data: {
+                status: RequestStatus.CANCELLED,
+            }
+        })
+
+
+        return { success: true }
+    }
     @Subscription(() => RequestNearby, {
         topics: NEED_HELP_REQUEST,
         filter: ({ context, payload }: any) => {
