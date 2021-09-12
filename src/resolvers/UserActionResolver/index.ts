@@ -8,6 +8,8 @@ import {
     PubSub,
     PubSubEngine,
     Resolver,
+    Root,
+    Subscription,
     UseMiddleware,
 } from 'type-graphql'
 import { User } from '../../generated/type-graphql'
@@ -19,7 +21,7 @@ import { redisIterate } from '../../utils/redis'
 import { PositionArgs, UserLocation } from '../../utils/redis/location'
 import { NEED_HELP_REQUEST } from '../SubscriptionTypes'
 import { distanceCalculator } from '../UserResolver'
-
+import * as R from 'rambda'
 @InputType()
 class HelpMeActionArgs {
     @Field(() => String)
@@ -43,20 +45,24 @@ class RequestNearby {
     requestor!: User
 }
 
-@Resolver(SuccessResponse)
+@ObjectType()
+class CreateRequestResult {
+    @Field(() => String)
+    requestId!: string
+}
+
+@Resolver()
 export class UserActionResolver {
     @UseMiddleware(isAuthenticated)
-    @Mutation(() => SuccessResponse)
+    @Mutation(() => CreateRequestResult)
     async createRequest(
         @Ctx() ctx: CustomContext,
         @Arg('input') requestArgs: HelpMeActionArgs,
         @PubSub() pubSub: PubSubEngine
-    ): Promise<SuccessResponse | null> {
+    ): Promise<CreateRequestResult | null> {
         const { prisma, redis, user } = ctx
-
-        console.log(user, requestArgs);
         
-        await prisma.request.create({
+        const {id: requestId} = await prisma.request.create({
             data: {
                 description: requestArgs.description,
                 customer_id: user.id,
@@ -103,7 +109,7 @@ export class UserActionResolver {
             }
         })
 
-        return { success: true }
+        return { requestId }
     }
 
     @UseMiddleware(isAuthenticated)
@@ -144,8 +150,10 @@ export class UserActionResolver {
             }
         })
 
+
         return { success: true }
     }
+
     // @Subscription(() => RequestNearby, {
     //     topics: NEED_HELP_REQUEST,
     //     filter: ({ payload, context: { connection } }: any) => {
