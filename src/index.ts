@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { ApolloServer } from 'apollo-server-express'
 import cookieParser from 'cookie-parser'
-import express from 'express'
+import express, { Request } from 'express'
 import { execute, subscribe } from 'graphql'
 import { PubSub } from 'graphql-subscriptions'
 import { createServer } from 'http'
@@ -9,8 +9,8 @@ import 'reflect-metadata'
 import { SubscriptionServer } from 'subscriptions-transport-ws'
 import { buildSchema } from 'type-graphql'
 import { resolvers } from './resolvers'
-import { CustomContext } from './types/customContext'
-import { getClaims } from './utils'
+import { Claims, CustomContext } from './types/customContext'
+import { getClaims, parseCookies } from './utils'
 import { redisClient } from './utils/redis'
 
 require('dotenv').config()
@@ -67,6 +67,12 @@ async function bootstrap() {
             schema,
             execute,
             subscribe,
+            //@ts-ignore
+            onConnect: async (params, wsocket, wscontext) => {        
+                const user: Claims | null = await getClaims(parseCookies(<Request>wscontext.request))
+                
+                return { user, prisma, redis }
+              },
         },
         {
             server: httpServer,

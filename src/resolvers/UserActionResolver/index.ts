@@ -31,6 +31,15 @@ class HelpMeActionArgs {
     inplace!: boolean
 }
 
+@ObjectType()
+class HelpMeAction {
+    @Field(() => String)
+    description!: string
+
+    @Field(() => Boolean)
+    inplace!: boolean
+}
+
 @InputType()
 class AcceptRequestArgs {
     @Field(() => String)
@@ -38,8 +47,8 @@ class AcceptRequestArgs {
 }
 @ObjectType()
 class RequestNearby {
-    @Field(() => HelpMeActionArgs)
-    request!: HelpMeActionArgs
+    @Field(() => HelpMeAction)
+    request!: HelpMeAction
 
     @Field(() => User)
     requestor!: User
@@ -154,19 +163,19 @@ export class UserActionResolver {
         return { success: true }
     }
 
-    // @Subscription(() => RequestNearby, {
-    //     topics: NEED_HELP_REQUEST,
-    //     filter: ({ payload, context: { connection } }: any) => {
-    //         const { id } = connection.context.user
+    @Subscription(() => RequestNearby, {
+        topics: NEED_HELP_REQUEST,
+        filter: ({ payload, context: { connection } }: any) => {
+            const { id } = connection.context.user
 
-    //         return R.find(R.equals(id), payload.users)
-    //     },
-    // })
-    // async requestNearby(
-    //     @Ctx() ctx: CustomContext,
-    //     @Root() requestNearby: RequestNearby & { users: string[] }
-    // ): Promise<RequestNearby> {
-    //     return R.omit(['users'], requestNearby)
-    // }
+            return R.find(R.equals(id), payload.users)
+        },
+    })
+    async requestNearby(
+        @Ctx() ctx: CustomContext,
+        @Root() requestNearby: RequestNearby & { users: string[] }
+    ): Promise<RequestNearby> {
+        return R.omit(['users'], requestNearby)
+    }
 
 }
