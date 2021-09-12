@@ -4,10 +4,12 @@
     "main": "index.js",
     "license": "MIT",
     "scripts": {
-        "dev": "nodemon",
-        "build": "rm -rf build && npx prisma generate && tsc",
+        "dev": "npm run gen && nodemon",
+        "gen": "npx prisma generate",
+        "build": "npm run gen && rm -rf build && tsc",
         "start": "npm run build && node build/index.js",
-        "migrate": "npx prisma migrate dev"
+        "migrate": "npx prisma migrate dev",
+        "dbstudio": "npx prisma studio"
     },
     "devDependencies": {},
     "dependencies": {
