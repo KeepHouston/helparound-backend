@@ -11,7 +11,22 @@
         "migrate": "npx prisma migrate dev",
         "dbstudio": "npx prisma studio"
     },
-    "devDependencies": {},
+    "devDependencies": {
+        "husky": "^7.0.2",
+        "lint-staged": "^11.1.2",
+        "prettier": "^2.3.2"
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged"
+        }
+    },
+    "lint-staged": {
+        "*.js": [
+            "prettier --write",
+            "git add"
+        ]
+    },
     "dependencies": {
         "@graphql-tools/schema": "^8.2.0",
         "@prisma/client": "^3.0.2",
