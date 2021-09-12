@@ -24,7 +24,7 @@ model user {
 
 model request {
   id          String   @id @default(uuid())
-  status      String   @default("pending")
+  status      String   @default("PENDING")
   description String
   is_in_place Boolean
   grade       Int      @default(0)
