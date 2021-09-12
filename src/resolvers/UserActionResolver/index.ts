@@ -70,8 +70,8 @@ export class UserActionResolver {
         @PubSub() pubSub: PubSubEngine
     ): Promise<CreateRequestResult | null> {
         const { prisma, redis, user } = ctx
-        
-        const {id: requestId} = await prisma.request.create({
+
+        const { id: requestId } = await prisma.request.create({
             data: {
                 description: requestArgs.description,
                 customer_id: user.id,
@@ -83,10 +83,9 @@ export class UserActionResolver {
 
         const requestor = await prisma.user.findUnique({ where: { id: user.id } })
 
-        const under300meters: string[] = []
-        const firstTen: string[] = []
+        const unsortedUsers: { userId: string, distance: number }[] = []
 
-        location && redisIterate(redis, (key, value) => {
+        location && await redisIterate(redis, (key, value) => {
 
             const _user = (<PositionArgs>JSON.parse(value))
 
@@ -99,24 +98,13 @@ export class UserActionResolver {
 
             const splittedKey = key.split(":")[1]
 
-            if (distance <= 300) {
 
-                under300meters.push(splittedKey)
+            unsortedUsers.push({ userId: splittedKey, distance })
 
-                if (under300meters.length === 5) {
-                    pubSub.publish(NEED_HELP_REQUEST, { users: under300meters, request: requestArgs, requestor })
-                    return
-
-                }
-            }
-
-            firstTen.push(splittedKey)
-
-            if (firstTen.length === 10) {
-                pubSub.publish(NEED_HELP_REQUEST, { users: firstTen, request: requestArgs, requestor })
-                return
-            }
         })
+
+        pubSub.publish(NEED_HELP_REQUEST, { users: unsortedUsers.sort((a, b) => a.distance - b.distance).slice(15), request: requestArgs, requestor })
+
 
         return { requestId }
     }
@@ -168,10 +156,12 @@ export class UserActionResolver {
         filter: ({ payload, context: { connection } }: any) => {
             const { id } = connection.context.user
 
+            console.log(payload, id);
+
             return R.find(R.equals(id), payload.users)
         },
     })
-    async requestNearby(
+    async incomingRequest(
         @Ctx() ctx: CustomContext,
         @Root() requestNearby: RequestNearby & { users: string[] }
     ): Promise<RequestNearby> {
