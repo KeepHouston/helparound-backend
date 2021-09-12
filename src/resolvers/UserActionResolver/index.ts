@@ -17,6 +17,11 @@ import { User } from '../../generated/type-graphql'
 import { isAuthenticated } from '../../middlewares/isAuthenticated'
 import { CustomContext } from '../../types/customContext'
 import { RequestStatus } from '../../types/enums'
+import {
+    NEED_HELP_REQUEST,
+    OUTCOMING_REQUEST_ACCEPTED,
+    REQUEST_APPROVED,
+} from '../../types/subscriptionTypes'
 import { SuccessResponse } from '../../types/SuccessResponse'
 import { redisIterate } from '../../utils/redis'
 import {
@@ -24,11 +29,6 @@ import {
     PositionObject,
     UserLocation,
 } from '../../utils/redis/location'
-import {
-    NEED_HELP_REQUEST,
-    OUTCOMING_REQUEST_ACCEPTED,
-    REQUEST_APPROVED,
-} from '../SubscriptionTypes'
 import { distanceCalculator } from '../UserResolver'
 @InputType()
 class HelpMeActionArgs {
@@ -116,30 +116,33 @@ export class UserActionResolver {
 
         const unsortedUsers: { userId: string; distance: number }[] = []
 
-        location &&
-            (await redisIterate(redis, (key, value) => {
-                const _user = <PositionArgs>JSON.parse(value)
+        if (location) {
+            await redisIterate(redis, (key, value) => {
+                const userLocation = <PositionArgs>JSON.parse(value)
 
                 const distance = distanceCalculator(
                     location.latitude,
                     location.longitude,
-                    _user.latitude,
-                    _user.longitude
+                    userLocation.latitude,
+                    userLocation.longitude
                 )
 
-                const splittedKey = key.split(':')[1]
+                const userId = key.split(':')[1]
 
-                unsortedUsers.push({ userId: splittedKey, distance })
-            }))
+                unsortedUsers.push({ userId, distance })
+            })
+        }
 
-        pubSub.publish(NEED_HELP_REQUEST, {
-            users: unsortedUsers
-                .sort((a, b) => a.distance - b.distance)
-                .slice(0, Math.min(15, unsortedUsers.length)),
-            request: { ...requestArgs, id: requestId },
-            requestor,
-            location,
-        })
+        if (unsortedUsers.length) {
+            pubSub.publish(NEED_HELP_REQUEST, {
+                users: unsortedUsers
+                    .sort((a, b) => a.distance - b.distance)
+                    .slice(0, Math.min(15, unsortedUsers.length)),
+                request: { ...requestArgs, id: requestId },
+                requestor,
+                location,
+            })
+        }
 
         return { requestId }
     }
@@ -156,6 +159,15 @@ export class UserActionResolver {
         await prisma.request.update({
             where: {
                 id: acceptRequestArgs.requestId,
+            },
+            include: {
+                customer: {
+                    include: {
+                        requests_as_customer: {
+                            where: { customer_id: user.id },
+                        },
+                    },
+                },
             },
             data: {
                 status: RequestStatus.COMPLETED,

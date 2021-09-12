@@ -12,7 +12,6 @@ import { resolvers } from './resolvers'
 import { Claims, CustomContext } from './types/customContext'
 import { getClaims, parseCookies } from './utils'
 import { redisClient } from './utils/redis'
-import { UserLocation } from './utils/redis/location'
 
 require('dotenv').config()
 
