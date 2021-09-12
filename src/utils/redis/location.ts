@@ -1,9 +1,19 @@
-import { Field, Float, InputType } from 'type-graphql'
+import { Field, Float, InputType, ObjectType } from 'type-graphql'
 import { redisClient } from '.'
 
 
 @InputType()
 export class PositionArgs {
+
+    @Field((type) => Float)
+    latitude!: number
+
+    @Field((type) => Float)
+    longitude!: number
+}
+
+@ObjectType()
+export class PositionObject {
 
     @Field((type) => Float)
     latitude!: number

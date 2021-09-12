@@ -64,6 +64,7 @@ async function bootstrap() {
     })
     const subscriptionServer = SubscriptionServer.create(
         {
+          
             schema,
             execute,
             subscribe,

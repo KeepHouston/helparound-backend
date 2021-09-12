@@ -18,7 +18,7 @@ import { CustomContext } from '../../types/customContext'
 import { RequestStatus } from '../../types/enums'
 import { SuccessResponse } from '../../types/SuccessResponse'
 import { redisIterate } from '../../utils/redis'
-import { PositionArgs, UserLocation } from '../../utils/redis/location'
+import { PositionArgs, PositionObject, UserLocation } from '../../utils/redis/location'
 import { NEED_HELP_REQUEST } from '../SubscriptionTypes'
 import { distanceCalculator } from '../UserResolver'
 import * as R from 'rambda'
@@ -52,6 +52,9 @@ class RequestNearby {
 
     @Field(() => User)
     requestor!: User
+
+    @Field(() => PositionObject)
+    location!: PositionObject
 }
 
 @ObjectType()
@@ -103,7 +106,7 @@ export class UserActionResolver {
 
         })
 
-        pubSub.publish(NEED_HELP_REQUEST, { users: unsortedUsers.sort((a, b) => a.distance - b.distance).slice(15), request: requestArgs, requestor })
+        pubSub.publish(NEED_HELP_REQUEST, { users: unsortedUsers.sort((a, b) => a.distance - b.distance).slice(0, Math.min(15, unsortedUsers.length)), request: requestArgs, requestor, location })
 
 
         return { requestId }
@@ -153,17 +156,15 @@ export class UserActionResolver {
 
     @Subscription(() => RequestNearby, {
         topics: NEED_HELP_REQUEST,
-        filter: ({ payload, context: { connection } }: any) => {
-            const { id } = connection.context.user
+        filter: ({ context, payload }: any) => {
+            const { id } = context.user
 
-            console.log(payload, id);
-
-            return R.find(R.equals(id), payload.users)
+            return !!R.find(R.propEq('userId', id), payload.users)
         },
     })
     async incomingRequest(
         @Ctx() ctx: CustomContext,
-        @Root() requestNearby: RequestNearby & { users: string[] }
+        @Root() requestNearby: RequestNearby & { users: {userId: string, distance: number}[] }
     ): Promise<RequestNearby> {
         return R.omit(['users'], requestNearby)
     }
