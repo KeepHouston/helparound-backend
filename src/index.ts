@@ -76,11 +76,11 @@ async function bootstrap() {
         return { user, prisma, redis }
       },
       //@ts-ignore
-      onDisconnect: async (wsocket, wscontext) => {
-        const { user } = await wscontext.initPromise;
+      // onDisconnect: async (wsocket, wscontext) => {
+      //   const { user } = await wscontext.initPromise;
 
-        await new UserLocation(user.id).delete()
-      },
+      //   await new UserLocation(user.id).delete()
+      // },
     },
     {
       server: httpServer,

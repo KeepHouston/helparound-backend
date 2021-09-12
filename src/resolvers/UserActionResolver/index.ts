@@ -19,7 +19,7 @@ import { RequestStatus } from '../../types/enums'
 import { SuccessResponse } from '../../types/SuccessResponse'
 import { redisIterate } from '../../utils/redis'
 import { PositionArgs, PositionObject, UserLocation } from '../../utils/redis/location'
-import { NEED_HELP_REQUEST, OUTCOMING_REQUEST_ACCEPTED } from '../SubscriptionTypes'
+import { NEED_HELP_REQUEST, OUTCOMING_REQUEST_ACCEPTED, REQUEST_APPROVED } from '../SubscriptionTypes'
 import { distanceCalculator } from '../UserResolver'
 import * as R from 'rambda'
 @InputType()
@@ -29,6 +29,13 @@ class HelpMeActionArgs {
 
     @Field(() => Boolean)
     inplace!: boolean
+}
+
+@ObjectType()
+class SuccessWithRequest extends SuccessResponse {
+
+    @Field(() => String)
+    requestId!: string
 }
 
 @ObjectType()
@@ -131,6 +138,7 @@ export class UserActionResolver {
     async approveRequest(
         @Ctx() ctx: CustomContext,
         @Arg('input') acceptRequestArgs: AcceptRequestArgs,
+        @PubSub() pubSub: PubSubEngine
     ): Promise<SuccessResponse | null> {
         const { prisma, user } = ctx
 
@@ -143,6 +151,7 @@ export class UserActionResolver {
             }
         })
 
+        pubSub.publish(REQUEST_APPROVED, { requestId: acceptRequestArgs.requestId })
         return { success: true }
     }
 
@@ -158,7 +167,7 @@ export class UserActionResolver {
         const { requestId } = acceptRequestArgs
 
         const location = await new UserLocation(user.id).get()
-        
+
         await prisma.request.update({
             where: {
                 id: requestId,
@@ -169,7 +178,7 @@ export class UserActionResolver {
             }
         })
 
-        pubSub.publish(OUTCOMING_REQUEST_ACCEPTED, { requestId, acceptorLocation: location})
+        pubSub.publish(OUTCOMING_REQUEST_ACCEPTED, { requestId, acceptorLocation: location })
 
         return { success: true }
     }
@@ -228,4 +237,21 @@ export class UserActionResolver {
         return outcomingRequestAcceptedAction
     }
 
+    @Subscription(() => SuccessWithRequest, {
+        topics: REQUEST_APPROVED,
+        filter: async ({ context, payload }: any) => {
+            const { prisma, user } = context
+            const { id } = user
+
+            const resp = await prisma.request.findUnique({ where: { id: payload.requestId }, include: { supplier: true } })
+
+            return resp.supplier_id === id
+        },
+    })
+    async requestStatusApprove(
+        @Ctx() ctx: CustomContext,
+        @Root() actionApprove: { requestId: string }
+    ): Promise<SuccessWithRequest> {
+        return { success: true, ...actionApprove }
+    }
 }
